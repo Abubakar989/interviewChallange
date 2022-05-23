@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const crypto = require("crypto");
 
 const UserSchema = new mongoose.Schema({
-  username: {
+  userName: {
     type: String,
     required: true,
   },
@@ -13,36 +13,15 @@ const UserSchema = new mongoose.Schema({
     required: true,
   },
 
-  password: String,
-
-  is_Admin: {
-    type: Boolean,
-    default: false,
-  },
-
-  is_Blocked: {
-    type: Boolean,
-    default: false,
-  },
-  is_Purchased: {
-    type: Boolean,
-    default: false,
-  },
-  token: String,
-  Created_date: {
-    type: Date,
-    default: Date.now,
-  },
-
-  passwordChangedAt: Date,
-
-  passwordResetToken: {
+  password: {
     type: String,
+    unique: true,
+    required: true,
+
   },
-  passwordResetExpires: {
-    type: Number,
-   
-  },
+
+  token: String,
+
 });
 
 module.exports = mongoose.model("User", UserSchema);

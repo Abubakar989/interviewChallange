@@ -1,20 +1,13 @@
 const config = require("../config/auth.config");
-const email = require("../utils/sendEmail");
-const getuser = require("../utils/users");
-const reset = require("../utils/resetpassword");
 const User = require("../models/user.model");
-const crypto = require("crypto");
-const moment = require("moment");
-
 var jwt = require("jsonwebtoken");
 var bcrypt = require("bcryptjs");
 
 exports.signup = async (req, res) => {
   const user = new User({
-    username: req.body.username,
+    userName: req.body.userName,
     email: req.body.email,
     password: bcrypt.hashSync(req.body.password, 8),
-    is_Admin: req.body.is_Admin,
   });
 
   const token = jwt.sign({ user_id: user._id }, config.secret, {
@@ -31,18 +24,17 @@ exports.signup = async (req, res) => {
     }
     return res.status(200).json({
       id: user._id,
-      username: user.username,
+      username: user.userName,
       email: user.email,
-      is_Admin: user.is_Admin,
       accessToken: token,
     });
   });
 };
 
 exports.signin = async (req, res) => {
+
   const user2 = await User.findOne({
     email: req.body.email,
-    is_Blocked: false,
   }).exec(async (err, user) => {
     if (err) {
       res.status(500).json({ message: err });
@@ -68,107 +60,32 @@ exports.signin = async (req, res) => {
 
     const find = await User.updateOne(
       { email: req.body.email },
-      { $set: { token: token } }
-    )
-      .lean()
-      .then((result) => {
-        res.status(200).json({
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          is_Admin: user.is_Admin,
-          accessToken: token,
-        });
-      })
-      .catch((err) => {
-        res.status(500).json({ error: err });
-      });
-  });
-};
+      { $set: { token: token } },
+      { new: true }
+    ).lean()
 
-exports.forgotPassword = async (req, res) => {
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  const passwordResetToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
+    res.status(200).json({ user });
 
-  let dbUser = await getuser.getUserByEmail(req.body.email);
-
-  if (!dbUser) {
-    return res.status(404).json({
-      status: 404,
-      message: "There is no user found with this email address",
-    });
-  }
-  dbUser.passwordResetToken = passwordResetToken;
-
-  const resetURL = `${resetToken}`;
-
-  try {
-    await email.sendEmail(
-      req.body.email,
-      "Reset Password ONLY VALID FOR 10 MINS",
-      resetURL
-    );
-    const time = parseInt(moment().unix());
-    dbUser.passwordResetExpires = time;
-    await dbUser.save({ validateBeforeSave: false });
-
-    res.status(200).json({
-      code: 200,
-      message: "Password reset email has been successfully sent to your email",
-    });
-  } catch (err) {
-    res.status(500).json({ error: err });
-  }
-};
-
-exports.resetPassword = async (req, res) => {
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
-
-  await User.findOne({
-    passwordResetToken: hashedToken,
   })
-    .exec()
-    .then((product) => {
-      const generateTime = product.passwordResetExpires;
-      const currentTime = parseInt(moment().unix());
-      const diff = currentTime - generateTime;
-      if (diff < 600) {
-        product.password = bcrypt.hashSync(req.body.password, 8);
-        product.passwordResetToken = undefined;
-        product.passwordResetExpires = undefined;
-        product.save((err, result) => {
-          if (err) {
-            res
-              .status(500)
-              .send("System error and user not saved due to some issue");
-            return;
-          }
-          res.status(200).json({
-            message: "Password changed successfully!",
-            result,
-          });
-        });
-      } else {
-        product.passwordResetToken = undefined;
-        product.passwordResetExpires = undefined;
-        product.save();
-        return res.status(404).json({
-          status: 404,
-          message: "Time Expire",
-        });
-      }
-    })
-    .catch((err) => {
-      return res.status(404).json({
-        status: 404,
-        message: "User not Found",
-        err,
-      });
-    });
+};
+
+exports.updateName = async (req, res) => {
+  const user = await User.findOne({
+    email: req.body.email,
+  }).lean();
+
+  if (!user) {
+    return res.status(404).json({ message: "User Not found." });
+  }
+
+  const updatedName = await User.findOneAndUpdate(
+    { email: req.body.email },
+    { $set: { userName: req.body.userName } },
+    { new: true }
+  ).lean();
+
+
+  res.status(200).json({
+    updatedName
+  });
 };
