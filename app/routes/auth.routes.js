@@ -22,4 +22,8 @@ module.exports = function (app) {
 
   app.post("/api/updateName", middlewares(validate.emailAndUserName), controller.updateName);
 
+  app.post("/createPost", controller.createPost);
+
+  app.get("/getAllPost", controller.getAllPost);
+
 };

@@ -5,9 +5,28 @@ const helmet = require("helmet");
 var xss = require("xss-clean");
 const path = require("path");
 const morgan = require("morgan");
+const { fileParser } = require('express-multipart-file-parser');
 require("dotenv").config();
 const app = express();
+
 app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
+app.use(express.json());
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  fileParser({
+    rawBodyOptions: {
+      limit: '30mb', //file size limit
+    },
+    busboyOptions: {
+      limits: {
+        fields: 50, //Number text fields allowed
+      },
+    },
+  })
+);
+
 
 app.use(cors());
 app.options("*", cors());
@@ -15,8 +34,6 @@ app.options("*", cors());
 app.use(helmet());
 app.use(xss());
 app.use(morgan("tiny"));
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 const db = require("./app/models");
 

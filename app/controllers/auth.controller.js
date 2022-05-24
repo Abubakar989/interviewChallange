@@ -1,11 +1,18 @@
 const config = require("../config/auth.config");
 const User = require("../models/user.model");
+const Post = require("../models/post.model");
 var jwt = require("jsonwebtoken");
 var bcrypt = require("bcryptjs");
+const Resize = require("../utils/resize");
+const path = require('path');
+const fs = require('fs');
+const uploadToAws = require('../utils/helper');
+
 
 exports.signup = async (req, res) => {
   const user = new User({
-    userName: req.body.userName,
+    firstName: req.body.firstName,
+    lastName: req.body.firstName,
     email: req.body.email,
     password: bcrypt.hashSync(req.body.password, 8),
   });
@@ -89,3 +96,51 @@ exports.updateName = async (req, res) => {
     updatedName
   });
 };
+
+
+exports.createPost = async (req, res) => {
+  // console.log(req);
+  const { files } = req;
+
+  if (!files) {
+    return res.status(401).json({ error: 'Please provide an image' });
+  }
+
+  const user = User.findById({ _id: req.body.id });
+  // console.log(files);
+
+  if (user) {
+    let imgData = await uploadToAws(files[0].buffer, `${Date.now()}-image.png`);
+    // console.log(imgData);
+    const post = new Post({
+      createdBy: req.body.id,
+      image: imgData.Location,
+      name: req.body.name,
+      description: req.body.description,
+    });
+    const save = await post.save((err, user) => {
+      if (err) {
+        res.status(500).json({ message: err });
+        return;
+      }
+      return res.status(200).json({
+        user
+      });
+    });
+  }
+  else {
+    return res.status(401).json({ error: 'User not found' });
+  }
+}
+
+exports.getAllPost = async (req, res) => {
+
+  Post.find({}).lean().exec(function (err, docs) {
+    // console.log(docs);
+    res.status(200).send(docs);
+    if (err) {
+      res.status(500).send(err);
+    }
+  });
+}
+
