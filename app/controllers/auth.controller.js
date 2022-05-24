@@ -136,7 +136,7 @@ exports.createPost = async (req, res) => {
 exports.getAllPost = async (req, res) => {
 
   Post.find({}).lean().exec(function (err, docs) {
-    // console.log(docs);
+    console.log(docs);
     res.status(200).send(docs);
     if (err) {
       res.status(500).send(err);
